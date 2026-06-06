@@ -5,6 +5,7 @@
     db: { stats: null, codes: [], connected: false },
     api: { base: '', mainUrl: '', currentUrl: '', backups: [], apiSecret: '', connected: false, statuses: {} },
   };
+  var lastApiSubmitMode = 'main';
 
   function token() {
     return window.HuiyiLogin ? window.HuiyiLogin.getToken() : '';
@@ -19,7 +20,7 @@
   async function authedJson(url, opts) {
     var resp = await authedFetch(url, opts);
     var data = await resp.json().catch(function () { return {}; });
-    if (!resp.ok) throw new Error(data.error || 'HTTP ' + resp.status);
+    if (!resp.ok) throw new Error(data.error || '请求失败：' + resp.status);
     return data;
   }
 
@@ -44,6 +45,12 @@
     return div.innerHTML;
   }
 
+  function statusClass(status) {
+    if (status === 'ok') return 'ok';
+    if (status === 'error') return 'danger';
+    return '';
+  }
+
   function updateSidebarStatus(type, status) {
     var dot = document.getElementById(type + 'StatusDot');
     var text = document.getElementById(type + 'StatusText');
@@ -65,17 +72,17 @@
   function formatCountdown(expiresAt) {
     if (!expiresAt) return '-';
     var diff = new Date(expiresAt).getTime() - Date.now();
-    if (isNaN(diff) || diff <= 0) return 'Expired';
+    if (isNaN(diff) || diff <= 0) return '已过期';
     var seconds = Math.floor(diff / 1000);
     var days = Math.floor(seconds / 86400);
     var hours = Math.floor((seconds % 86400) / 3600);
     var minutes = Math.floor((seconds % 3600) / 60);
     var rest = seconds % 60;
     var parts = [];
-    if (days) parts.push(days + 'd');
-    if (hours || days) parts.push(hours + 'h');
-    parts.push(minutes + 'm');
-    parts.push(rest + 's');
+    if (days) parts.push(days + '天');
+    if (hours || days) parts.push(hours + '小时');
+    parts.push(minutes + '分');
+    parts.push(rest + '秒');
     return parts.join(' ');
   }
 
@@ -110,24 +117,19 @@
     } catch (error) {
       state.db.connected = false;
       updateSidebarStatus('db', 'error');
-      console.warn('Database load failed', error);
+      console.warn('数据库加载失败', error);
     }
   }
 
   async function loadApiConfig() {
     try {
       var data = await authedJson('/console/api-urls');
-      state.api.currentUrl = data.currentUrl || '';
-      state.api.mainUrl = data.mainUrl || '';
-      state.api.base = data.currentUrl || data.mainUrl || '';
-      state.api.backups = data.backups || [];
-      state.api.apiSecret = data.apiSecret || '';
-      renderApiConfig();
-      if (state.api.base) await checkApiConnection(false);
+      applyApiConfig(data);
+      if (state.api.base) await checkApiConnection(false, state.api.base);
       else updateApiStatus(false, 'API 未配置');
     } catch (error) {
       updateApiStatus(false, 'API 配置加载失败');
-      console.warn('API config load failed', error);
+      console.warn('API 配置加载失败', error);
     }
   }
 
@@ -153,11 +155,7 @@
     setText('connectionStatusText', text || (ok ? '已连接' : '未配置'));
   }
 
-  function renderApiConfig() {
-    var input = document.querySelector('#apiConfigForm input[name="base"]');
-    if (input) input.value = state.api.base || '';
-    var grid = document.getElementById('apiUrlsGrid');
-    if (!grid) return;
+  function getApiItems() {
     var items = [];
     if (state.api.base) {
       items.push({
@@ -169,25 +167,34 @@
     }
     (state.api.backups || []).forEach(function (backup, index) {
       items.push({
-        role: backup.label || ('备用接口 ' + (index + 1)),
+        role: '备用接口 ' + (index + 1),
         url: backup.url,
         key: backup.key,
         status: state.api.statuses[backup.url] || '',
       });
     });
+    return items;
+  }
 
+  function renderApiConfig() {
+    var input = document.querySelector('#apiConfigForm input[name="base"]');
+    if (input) input.value = state.api.base || '';
+    var grid = document.getElementById('apiUrlsGrid');
+    if (!grid) return;
+    var items = getApiItems();
     grid.innerHTML = items.length ? items.map(function (item) {
-      var statusText = item.status === 'ok' ? '正常' : item.status === 'error' ? '失败' : '未检测';
-      var statusClass = item.status === 'ok' ? 'connected' : item.status === 'error' ? 'error' : '';
-      var actions = '<button class="btn-inline" data-action="check-api" data-url="' + escapeHtml(item.url) + '">检测</button>';
+      var checkedText = item.status === 'ok' ? '正常' : item.status === 'error' ? '失败' : '未检测';
+      var actions = '<button class="btn-link" data-action="check-api" data-url="' + escapeHtml(item.url) + '">检测</button>';
       if (item.key) {
-        actions = '<button class="btn-inline" data-action="use-api" data-url="' + escapeHtml(item.url) + '">设为主接口</button>' + actions +
-          '<button class="btn-inline btn-danger" data-action="delete-api" data-key="' + escapeHtml(item.key) + '">删除</button>';
+        actions = '<button class="btn-promote" data-action="use-api" data-url="' + escapeHtml(item.url) + '">设为主接口</button>' + actions +
+          '<button class="btn-link danger-link" data-action="delete-api" data-key="' + escapeHtml(item.key) + '">删除</button>';
       }
-      return '<div class="saved-item">' +
-        '<div class="saved-label">' + escapeHtml(item.role) + '</div>' +
-        '<div class="saved-value">' + escapeHtml(item.url) + '</div>' +
-        '<div class="row-actions"><span class="status-dot ' + statusClass + '"></span><span>' + statusText + '</span>' + actions + '</div>' +
+      return '<div class="api-url-card' + (item.key ? ' is-backup' : '') + '">' +
+        '<span class="badge">' + escapeHtml(item.role) + '</span>' +
+        '<span class="url-text">' + escapeHtml(item.url) + '</span>' +
+        '<span class="card-check-dot ' + statusClass(item.status) + '"></span>' +
+        '<span class="api-check-text">' + checkedText + '</span>' +
+        '<span class="api-card-actions">' + actions + '</span>' +
         '</div>';
     }).join('') : '<div class="empty">API 地址未配置</div>';
   }
@@ -204,6 +211,10 @@
   async function saveApiConfig(form) {
     var data = new FormData(form);
     var base = normalizeApiBase(data.get('base'));
+    if (lastApiSubmitMode === 'backup') {
+      await addBackupApi(base, form);
+      return;
+    }
     await setMainApi(base);
   }
 
@@ -215,21 +226,19 @@
       body: JSON.stringify({ url: base }),
     });
     applyApiConfig(result);
-    toast('API 主接口已保存', 'ok');
-    await checkApiConnection(true);
+    toast('主接口已保存', 'ok');
+    await checkApiConnection(true, state.api.base);
   }
 
-  async function addBackupApi(form) {
-    var data = new FormData(form);
-    var url = normalizeApiBase(data.get('backup'));
-    if (!url) throw new Error('请输入备用 API 地址');
+  async function addBackupApi(url, form) {
+    if (!url) throw new Error('请输入 API 地址');
     var result = await authedJson('/console/api-urls/backups', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: url }),
     });
     applyApiConfig(result);
-    form.reset();
+    if (form) form.reset();
     toast('备用接口已添加', 'ok');
   }
 
@@ -270,7 +279,7 @@
       state.api.statuses[target] = 'error';
       renderApiConfig();
       updateApiStatus(false, 'API 未连接');
-      if (showToast) toast('API 检测失败: ' + error.message, 'error');
+      if (showToast) toast('API 检测失败：' + error.message, 'error');
       return false;
     } finally {
       if (timer) clearTimeout(timer);
@@ -278,7 +287,7 @@
   }
 
   async function checkAllApiUrls() {
-    var urls = [state.api.base].concat((state.api.backups || []).map(function (item) { return item.url; })).filter(Boolean);
+    var urls = getApiItems().map(function (item) { return item.url; }).filter(Boolean);
     if (!urls.length) {
       toast('API 地址未配置', 'error');
       return;
@@ -340,7 +349,7 @@
       actions.push('<button class="btn-inline btn-danger" data-action="delete-code" data-code="' + escapeHtml(code) + '">删除</button>');
       return '<tr>' +
         '<td><code>' + escapeHtml(code) + '</code></td>' +
-        '<td><span class="status-dot ' + tone + '"></span></td>' +
+        '<td><span class="table-status"><span class="status-dot ' + tone + '"></span>' + translateCodeStatus(status) + '</span></td>' +
         '<td>' + escapeHtml(room) + '</td>' +
         '<td>' + (row.expires_at ? new Date(row.expires_at).toLocaleString() : '-') +
         '<div class="countdown" data-expires-at="' + (row.expires_at || '') + '">' + formatCountdown(row.expires_at || '') + '</div></td>' +
@@ -349,6 +358,12 @@
     updateCountdowns();
     var modal = document.getElementById('detailModal');
     if (modal) modal.classList.remove('is-hidden');
+  }
+
+  function translateCodeStatus(status) {
+    if (status === 'expired') return '已过期';
+    if (status === 'in_use') return '使用中';
+    return '可用';
   }
 
   async function createCodes(form) {
@@ -445,14 +460,13 @@
     bindIfPresent('cleanupBtn', 'click', cleanup);
     bindIfPresent('chatRefreshBtn', 'click', refreshChat);
     bindIfPresent('checkAllUrlsBtn', 'click', checkAllApiUrls);
+    bindIfPresent('apiConfigForm', 'click', function (event) {
+      var btn = event.target.closest('[data-api-mode]');
+      if (btn) lastApiSubmitMode = btn.dataset.apiMode || 'main';
+    });
     bindIfPresent('apiConfigForm', 'submit', async function (event) {
       event.preventDefault();
       try { await saveApiConfig(this); }
-      catch (error) { toast(error.message, 'error'); }
-    });
-    bindIfPresent('apiBackupForm', 'submit', async function (event) {
-      event.preventDefault();
-      try { await addBackupApi(this); }
       catch (error) { toast(error.message, 'error'); }
     });
     bindIfPresent('chatRoomSelect', 'change', async function () {
@@ -460,7 +474,7 @@
         var data = await loadChatMessages(this.value, 500, 0);
         renderChatMessages(data.messages || [], data.total || 0);
       } catch (error) {
-        toast('加载消息失败: ' + error.message, 'error');
+        toast('加载消息失败：' + error.message, 'error');
       }
     });
     bindIfPresent('logoutBtn', 'click', function () {
@@ -520,7 +534,7 @@
           return;
         }
       } catch {
-        // Keep the UI usable during transient network issues.
+        // 网络短暂异常时继续展示页面。
       }
     }
     bindEvents();
@@ -555,11 +569,11 @@
     var select = document.getElementById('chatRoomSelect');
     if (!select) return;
     var currentValue = select.value;
-    select.innerHTML = '<option value="">-- All rooms --</option>';
+    select.innerHTML = '<option value="">-- 全部房间 --</option>';
     rooms.forEach(function (room) {
       var option = document.createElement('option');
       option.value = room.room_name;
-      option.textContent = room.room_name + ' (' + room.msg_count + ')';
+      option.textContent = room.room_name + '（' + room.msg_count + ' 条）';
       select.appendChild(option);
     });
     if (currentValue) select.value = currentValue;
@@ -569,16 +583,16 @@
     var container = document.getElementById('chatMessagesContainer');
     var countEl = document.getElementById('chatMsgCount');
     if (!container || !countEl) return;
-    countEl.textContent = total + ' messages';
+    countEl.textContent = '共 ' + total + ' 条消息';
     if (!messages.length) {
-      container.innerHTML = '<div class="empty">No chat messages</div>';
+      container.innerHTML = '<div class="empty">暂无聊天消息</div>';
       return;
     }
     container.innerHTML = messages.map(function (message) {
       var isLocal = message.sender_identity === '__local__';
       var cls = isLocal ? 'chat-msg sent' : 'chat-msg received';
       var time = message.created_at ? new Date(message.created_at).toLocaleString() : '';
-      var name = message.sender_name || message.sender_identity || 'Unknown';
+      var name = message.sender_name || message.sender_identity || '未知用户';
       return '<div class="' + cls + '">' +
         '<div class="chat-msg-header">' +
         '<span class="chat-msg-sender">' + escapeHtml(name) + '</span>' +
@@ -597,7 +611,7 @@
       var data = await loadChatMessages(selectedRoom, 500, 0);
       renderChatMessages(data.messages || [], data.total || 0);
     } catch (error) {
-      toast('加载聊天失败: ' + error.message, 'error');
+      toast('加载聊天失败：' + error.message, 'error');
     }
   }
 
