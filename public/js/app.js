@@ -3,7 +3,7 @@
 
   var state = {
     db: { stats: null, codes: [], connected: false },
-    api: { base: '', backups: [], connected: false },
+    api: { base: '', mainUrl: '', currentUrl: '', backups: [], apiSecret: '', connected: false, statuses: {} },
   };
 
   function token() {
@@ -51,14 +51,14 @@
     dot.className = 'status-dot';
     if (status === 'connected') {
       dot.classList.add('connected');
-      text.textContent = type === 'db' ? 'Database connected' : 'API connected';
+      text.textContent = type === 'db' ? '数据库已连接' : 'API 已连接';
     } else if (status === 'error') {
       dot.classList.add('error');
-      text.textContent = type === 'db' ? 'Database disconnected' : 'API disconnected';
+      text.textContent = type === 'db' ? '数据库未连接' : 'API 未连接';
     } else if (status === 'loading') {
-      text.textContent = type === 'db' ? 'Loading database...' : 'Checking API...';
+      text.textContent = type === 'db' ? '正在加载数据库...' : '正在检测 API...';
     } else {
-      text.textContent = type === 'db' ? 'Database disconnected' : 'API not configured';
+      text.textContent = type === 'db' ? '数据库未连接' : 'API 未配置';
     }
   }
 
@@ -89,7 +89,7 @@
     var parts = [row.assigned_name, row.assigned_to].filter(function (value) {
       return value !== undefined && value !== null && String(value).trim() !== '' && String(value).trim() !== '0';
     });
-    return parts.length ? parts.join(' / ') : 'Unassigned';
+    return parts.length ? parts.join(' / ') : '未分配';
   }
 
   async function loadStats() {
@@ -117,13 +117,16 @@
   async function loadApiConfig() {
     try {
       var data = await authedJson('/console/api-urls');
+      state.api.currentUrl = data.currentUrl || '';
+      state.api.mainUrl = data.mainUrl || '';
       state.api.base = data.currentUrl || data.mainUrl || '';
       state.api.backups = data.backups || [];
+      state.api.apiSecret = data.apiSecret || '';
       renderApiConfig();
       if (state.api.base) await checkApiConnection(false);
-      else updateApiStatus(false, 'API not configured');
+      else updateApiStatus(false, 'API 未配置');
     } catch (error) {
-      updateApiStatus(false, 'API config load failed');
+      updateApiStatus(false, 'API 配置加载失败');
       console.warn('API config load failed', error);
     }
   }
@@ -146,8 +149,8 @@
       if (ok) dot.classList.add('connected');
       else if (state.api.base) dot.classList.add('error');
     });
-    setText('apiStatusText', text || (ok ? 'API connected' : 'API not configured'));
-    setText('connectionStatusText', text || (ok ? 'Connected' : 'Not configured'));
+    setText('apiStatusText', text || (ok ? 'API 已连接' : 'API 未配置'));
+    setText('connectionStatusText', text || (ok ? '已连接' : '未配置'));
   }
 
   function renderApiConfig() {
@@ -155,45 +158,135 @@
     if (input) input.value = state.api.base || '';
     var grid = document.getElementById('apiUrlsGrid');
     if (!grid) return;
-    grid.innerHTML = state.api.base
-      ? '<div class="saved-item"><div class="saved-label">Main API</div><div class="saved-value">' + escapeHtml(state.api.base) + '</div></div>'
-      : '<div class="empty">API URL is not configured</div>';
+    var items = [];
+    if (state.api.base) {
+      items.push({
+        role: '主接口',
+        url: state.api.base,
+        key: '',
+        status: state.api.statuses[state.api.base] || '',
+      });
+    }
+    (state.api.backups || []).forEach(function (backup, index) {
+      items.push({
+        role: backup.label || ('备用接口 ' + (index + 1)),
+        url: backup.url,
+        key: backup.key,
+        status: state.api.statuses[backup.url] || '',
+      });
+    });
+
+    grid.innerHTML = items.length ? items.map(function (item) {
+      var statusText = item.status === 'ok' ? '正常' : item.status === 'error' ? '失败' : '未检测';
+      var statusClass = item.status === 'ok' ? 'connected' : item.status === 'error' ? 'error' : '';
+      var actions = '<button class="btn-inline" data-action="check-api" data-url="' + escapeHtml(item.url) + '">检测</button>';
+      if (item.key) {
+        actions = '<button class="btn-inline" data-action="use-api" data-url="' + escapeHtml(item.url) + '">设为主接口</button>' + actions +
+          '<button class="btn-inline btn-danger" data-action="delete-api" data-key="' + escapeHtml(item.key) + '">删除</button>';
+      }
+      return '<div class="saved-item">' +
+        '<div class="saved-label">' + escapeHtml(item.role) + '</div>' +
+        '<div class="saved-value">' + escapeHtml(item.url) + '</div>' +
+        '<div class="row-actions"><span class="status-dot ' + statusClass + '"></span><span>' + statusText + '</span>' + actions + '</div>' +
+        '</div>';
+    }).join('') : '<div class="empty">API 地址未配置</div>';
+  }
+
+  function applyApiConfig(data) {
+    state.api.currentUrl = data.currentUrl || '';
+    state.api.mainUrl = data.mainUrl || '';
+    state.api.base = data.currentUrl || data.mainUrl || '';
+    state.api.backups = data.backups || [];
+    state.api.apiSecret = data.apiSecret || state.api.apiSecret || '';
+    renderApiConfig();
   }
 
   async function saveApiConfig(form) {
     var data = new FormData(form);
     var base = normalizeApiBase(data.get('base'));
-    if (!base) throw new Error('Please enter API URL');
+    await setMainApi(base);
+  }
+
+  async function setMainApi(base) {
+    if (!base) throw new Error('请输入 API 地址');
     var result = await authedJson('/console/api-urls/main', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: base }),
     });
-    state.api.base = result.currentUrl || result.mainUrl || base;
-    renderApiConfig();
-    toast('API URL saved', 'ok');
+    applyApiConfig(result);
+    toast('API 主接口已保存', 'ok');
     await checkApiConnection(true);
   }
 
-  async function checkApiConnection(showToast) {
-    if (!state.api.base) {
-      updateApiStatus(false, 'API not configured');
-      if (showToast) toast('API URL is not configured', 'error');
-      return;
+  async function addBackupApi(form) {
+    var data = new FormData(form);
+    var url = normalizeApiBase(data.get('backup'));
+    if (!url) throw new Error('请输入备用 API 地址');
+    var result = await authedJson('/console/api-urls/backups', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: url }),
+    });
+    applyApiConfig(result);
+    form.reset();
+    toast('备用接口已添加', 'ok');
+  }
+
+  async function deleteBackupApi(key) {
+    if (!key) return;
+    var result = await authedJson('/console/api-urls/backups/' + encodeURIComponent(key), { method: 'DELETE' });
+    applyApiConfig(result);
+    toast('备用接口已删除', 'ok');
+  }
+
+  async function checkApiConnection(showToast, targetUrl) {
+    var target = normalizeApiBase(targetUrl || state.api.base);
+    if (!target) {
+      updateApiStatus(false, 'API 未配置');
+      if (showToast) toast('API 地址未配置', 'error');
+      return false;
     }
     updateSidebarStatus('api', 'loading');
+    var timer;
     try {
       var controller = new AbortController();
-      var timer = setTimeout(function () { controller.abort(); }, 10000);
-      var resp = await fetch(state.api.base + '/health/ping', { signal: controller.signal });
-      clearTimeout(timer);
-      if (!resp.ok) throw new Error('HTTP ' + resp.status);
-      updateApiStatus(true, 'API connected');
-      if (showToast) toast('API connected', 'ok');
+      timer = setTimeout(function () { controller.abort(); }, 10000);
+      if (window.HuiyiApi && window.HuiyiApi.request) {
+        await window.HuiyiApi.request(target, state.api.apiSecret, '/health', { signal: controller.signal });
+      } else {
+        var resp = await fetch(target + '/api/health', {
+          signal: controller.signal,
+          headers: { 'X-API-Secret': state.api.apiSecret || '' },
+        });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+      }
+      state.api.statuses[target] = 'ok';
+      renderApiConfig();
+      updateApiStatus(true, 'API 已连接');
+      if (showToast) toast('API 连接正常', 'ok');
+      return true;
     } catch (error) {
-      updateApiStatus(false, 'API disconnected');
-      if (showToast) toast('API check failed: ' + error.message, 'error');
+      state.api.statuses[target] = 'error';
+      renderApiConfig();
+      updateApiStatus(false, 'API 未连接');
+      if (showToast) toast('API 检测失败: ' + error.message, 'error');
+      return false;
+    } finally {
+      if (timer) clearTimeout(timer);
     }
+  }
+
+  async function checkAllApiUrls() {
+    var urls = [state.api.base].concat((state.api.backups || []).map(function (item) { return item.url; })).filter(Boolean);
+    if (!urls.length) {
+      toast('API 地址未配置', 'error');
+      return;
+    }
+    for (var index = 0; index < urls.length; index += 1) {
+      await checkApiConnection(false, urls[index]);
+    }
+    toast('接口检测完成', 'ok');
   }
 
   function renderState() {
@@ -210,7 +303,7 @@
     if (!tbody) return;
     var rows = state.db.codes || [];
     if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="6" class="empty">No data</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="6" class="empty">暂无数据</td></tr>';
       return;
     }
     var groups = {};
@@ -226,13 +319,13 @@
       var available = list.length - used - expired;
       var encoded = encodeURIComponent(name);
       return '<tr><td>' + escapeHtml(name) + '</td><td>' + list.length + '</td><td>' + used + '</td><td>' + available + '</td><td>' + expired + '</td>' +
-        '<td><div class="row-actions"><button class="btn-inline btn-danger" data-action="delete-assignee" data-assignee="' + encoded + '">Delete group</button><button class="btn-inline" data-action="show-detail" data-assignee="' + encoded + '">Details</button></div></td></tr>';
+        '<td><div class="row-actions"><button class="btn-inline btn-danger" data-action="delete-assignee" data-assignee="' + encoded + '">删除分组</button><button class="btn-inline" data-action="show-detail" data-assignee="' + encoded + '">详情</button></div></td></tr>';
     }).join('');
   }
 
   function showAssigneeDetail(name) {
     var codes = (state.db.codes || []).filter(function (row) { return getAssigneeName(row) === name; });
-    setText('detailModalTitle', name + ' codes');
+    setText('detailModalTitle', name + ' 的授权码');
     var tbody = document.getElementById('detailTable');
     if (!tbody) return;
     tbody.innerHTML = codes.map(function (row) {
@@ -242,9 +335,9 @@
       var room = row.bound_room || row.room_name || '-';
       var actions = [];
       if (status !== 'expired' && room !== '-') {
-        actions.push('<button class="btn-inline" data-action="release-code" data-code="' + escapeHtml(code) + '">Release</button>');
+        actions.push('<button class="btn-inline" data-action="release-code" data-code="' + escapeHtml(code) + '">释放</button>');
       }
-      actions.push('<button class="btn-inline btn-danger" data-action="delete-code" data-code="' + escapeHtml(code) + '">Delete</button>');
+      actions.push('<button class="btn-inline btn-danger" data-action="delete-code" data-code="' + escapeHtml(code) + '">删除</button>');
       return '<tr>' +
         '<td><code>' + escapeHtml(code) + '</code></td>' +
         '<td><span class="status-dot ' + tone + '"></span></td>' +
@@ -252,7 +345,7 @@
         '<td>' + (row.expires_at ? new Date(row.expires_at).toLocaleString() : '-') +
         '<div class="countdown" data-expires-at="' + (row.expires_at || '') + '">' + formatCountdown(row.expires_at || '') + '</div></td>' +
         '<td><div class="row-actions">' + actions.join('') + '</div></td></tr>';
-    }).join('') || '<tr><td colspan="5" class="empty">No data</td></tr>';
+    }).join('') || '<tr><td colspan="5" class="empty">暂无数据</td></tr>';
     updateCountdowns();
     var modal = document.getElementById('detailModal');
     if (modal) modal.classList.remove('is-hidden');
@@ -260,7 +353,7 @@
 
   async function createCodes(form) {
     var data = Object.fromEntries(new FormData(form).entries());
-    if (!data.assigned || !String(data.assigned).trim()) throw new Error('Please enter an assignee');
+    if (!data.assigned || !String(data.assigned).trim()) throw new Error('请输入分配对象');
     data.count = Number(data.count);
     data.expire_minutes = Number(data.expire_minutes);
     var assigned = String(data.assigned).trim();
@@ -272,13 +365,13 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    toast('Created ' + (result.created || 0) + ' codes', 'ok');
+    toast('已创建 ' + (result.created || 0) + ' 个授权码', 'ok');
     await reloadData();
   }
 
   async function releaseCode(code) {
     await authedJson('/console/codes/' + encodeURIComponent(code) + '/release', { method: 'POST' });
-    toast('Released code ' + code, 'ok');
+    toast('已释放授权码 ' + code, 'ok');
     await reloadData();
   }
 
@@ -288,17 +381,17 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ codes: [code] }),
     });
-    toast(result.ok ? 'Deleted code ' + code : 'Delete failed', result.ok ? 'ok' : 'error');
+    toast(result.ok ? '已删除授权码 ' + code : '删除失败', result.ok ? 'ok' : 'error');
     await reloadData();
   }
 
   async function deleteAssigneeCodes(name) {
-    if (!confirm('Delete all codes for "' + name + '"?')) return;
+    if (!confirm('确定删除 "' + name + '" 的全部授权码？')) return;
     var codes = (state.db.codes || [])
       .filter(function (row) { return getAssigneeName(row) === name; })
       .map(function (row) { return row.code; });
     if (!codes.length) {
-      toast('No codes to delete', 'info');
+      toast('没有可删除的授权码', 'info');
       return;
     }
     var result = await authedJson('/console/codes', {
@@ -306,7 +399,7 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ codes: codes }),
     });
-    toast('Deleted ' + (result.deleted || 0) + ' codes', result.ok ? 'ok' : 'error');
+    toast('已删除 ' + (result.deleted || 0) + ' 个授权码', result.ok ? 'ok' : 'error');
     await reloadData();
     var modal = document.getElementById('detailModal');
     if (modal) modal.classList.add('is-hidden');
@@ -314,7 +407,7 @@
 
   async function cleanup() {
     var result = await authedJson('/console/cleanup', { method: 'POST' });
-    toast('Cleaned ' + (result.expired_sessions || 0) + ' expired sessions', 'ok');
+    toast('已清理 ' + (result.expired_sessions || 0) + ' 个过期会话', 'ok');
     await reloadData();
   }
 
@@ -347,14 +440,19 @@
       try { await createCodes(this); }
       catch (error) { toast(error.message, 'error'); }
     });
-    bindIfPresent('refreshAllBtn', 'click', async function () { await reloadData(); toast('Data refreshed', 'ok'); });
+    bindIfPresent('refreshAllBtn', 'click', async function () { await reloadData(); toast('数据已刷新', 'ok'); });
     bindIfPresent('refreshInlineBtn', 'click', reloadData);
     bindIfPresent('cleanupBtn', 'click', cleanup);
     bindIfPresent('chatRefreshBtn', 'click', refreshChat);
-    bindIfPresent('checkAllUrlsBtn', 'click', function () { checkApiConnection(true); });
+    bindIfPresent('checkAllUrlsBtn', 'click', checkAllApiUrls);
     bindIfPresent('apiConfigForm', 'submit', async function (event) {
       event.preventDefault();
       try { await saveApiConfig(this); }
+      catch (error) { toast(error.message, 'error'); }
+    });
+    bindIfPresent('apiBackupForm', 'submit', async function (event) {
+      event.preventDefault();
+      try { await addBackupApi(this); }
       catch (error) { toast(error.message, 'error'); }
     });
     bindIfPresent('chatRoomSelect', 'change', async function () {
@@ -362,7 +460,7 @@
         var data = await loadChatMessages(this.value, 500, 0);
         renderChatMessages(data.messages || [], data.total || 0);
       } catch (error) {
-        toast('Failed to load messages: ' + error.message, 'error');
+        toast('加载消息失败: ' + error.message, 'error');
       }
     });
     bindIfPresent('logoutBtn', 'click', function () {
@@ -396,6 +494,9 @@
         if (action === 'delete-assignee') await deleteAssigneeCodes(assignee);
         if (action === 'release-code') await releaseCode(code);
         if (action === 'delete-code') await deleteCode(code);
+        if (action === 'check-api') await checkApiConnection(true, btn.dataset.url || '');
+        if (action === 'use-api') await setMainApi(btn.dataset.url || '');
+        if (action === 'delete-api') await deleteBackupApi(btn.dataset.key || '');
       } catch (error) {
         toast(error.message, 'error');
       }
@@ -496,7 +597,7 @@
       var data = await loadChatMessages(selectedRoom, 500, 0);
       renderChatMessages(data.messages || [], data.total || 0);
     } catch (error) {
-      toast('Failed to load chat: ' + error.message, 'error');
+      toast('加载聊天失败: ' + error.message, 'error');
     }
   }
 

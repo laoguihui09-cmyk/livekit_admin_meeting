@@ -41,9 +41,17 @@ try {
   console.error('PostgreSQL initialization failed:', (error as Error).message);
 }
 
-const JWT_SECRET = process.env.ADMIN_CONSOLE_JWT_SECRET?.trim() || requireEnv('API_SECRET');
+const API_SECRET = requireEnv('API_SECRET');
+const JWT_SECRET = process.env.ADMIN_CONSOLE_JWT_SECRET?.trim() || API_SECRET;
 const ADMIN_USER = requireEnv('ADMIN_CONSOLE_USERNAME');
 const ADMIN_PASS = requireEnv('ADMIN_CONSOLE_PASSWORD');
+
+type ApiUrlConfig = {
+  currentUrl: string;
+  mainUrl: string;
+  apiSecret: string;
+  backups: Array<{ key: string; url: string; label: string }>;
+};
 
 function generateCode(): string {
   return crypto.randomBytes(3).toString('hex').toUpperCase();
@@ -62,6 +70,33 @@ function requireAdmin(req: Request, res: Response, next: NextFunction): void {
   }
 
   res.status(401).json({ error: 'Unauthorized' });
+}
+
+function normalizeApiConfigRows(rows: Array<{ key: string; value: string }>): ApiUrlConfig {
+  const config: ApiUrlConfig = { currentUrl: '', mainUrl: '', apiSecret: API_SECRET, backups: [] };
+  for (const row of rows) {
+    if (row.key === 'api_url') config.currentUrl = row.value || '';
+    if (row.key === 'api_url_main') config.mainUrl = row.value || '';
+    if (row.key.startsWith('api_url_backup_')) {
+      config.backups.push({
+        key: row.key,
+        url: row.value || '',
+        label: row.key.replace('api_url_backup_', '备用接口 '),
+      });
+    }
+  }
+
+  if (!config.currentUrl && config.mainUrl) config.currentUrl = config.mainUrl;
+  if (!config.mainUrl && config.currentUrl) config.mainUrl = config.currentUrl;
+  config.backups = config.backups.filter((item) => item.url).sort((a, b) => a.key.localeCompare(b.key));
+  return config;
+}
+
+async function loadApiUrlConfig(): Promise<ApiUrlConfig> {
+  const { rows } = await getPool().query(
+    "SELECT key, value FROM app_config WHERE key IN ('api_url', 'api_url_main') OR key LIKE 'api_url_backup_%' ORDER BY key",
+  );
+  return normalizeApiConfigRows(rows);
 }
 
 app.post('/console/auth/login', (req: Request, res: Response) => {
@@ -199,13 +234,7 @@ app.post('/console/cleanup', requireAdmin, async (_req: Request, res: Response) 
 
 app.get('/console/api-urls', requireAdmin, async (_req: Request, res: Response) => {
   try {
-    const { rows } = await getPool().query("SELECT key, value FROM app_config WHERE key IN ('api_url', 'api_url_main')");
-    const config: any = { currentUrl: '', mainUrl: '', apiSecret: JWT_SECRET, backups: [] };
-    for (const row of rows) {
-      if (row.key === 'api_url') config.currentUrl = row.value;
-      if (row.key === 'api_url_main') config.mainUrl = row.value;
-    }
-    res.json(config);
+    res.json(await loadApiUrlConfig());
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }
@@ -214,18 +243,58 @@ app.get('/console/api-urls', requireAdmin, async (_req: Request, res: Response) 
 app.put('/console/api-urls/main', requireAdmin, async (req: Request, res: Response) => {
   try {
     const url = typeof req.body.url === 'string' ? req.body.url.trim() : '';
+    if (!url) {
+      res.status(400).json({ error: 'Missing API URL' });
+      return;
+    }
     await getPool().query(
       "INSERT INTO app_config (key, value) VALUES ('api_url', $1), ('api_url_main', $1) ON CONFLICT (key) DO UPDATE SET value = $1",
       [url],
     );
-    res.json({ ok: true, currentUrl: url, mainUrl: url });
+    res.json({ ok: true, ...(await loadApiUrlConfig()) });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+app.post('/console/api-urls/backups', requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const url = typeof req.body.url === 'string' ? req.body.url.trim() : '';
+    if (!url) {
+      res.status(400).json({ error: 'Missing API URL' });
+      return;
+    }
+
+    const key = `api_url_backup_${Date.now()}`;
+    await getPool().query('INSERT INTO app_config (key, value) VALUES ($1, $2)', [key, url]);
+    res.json({ ok: true, ...(await loadApiUrlConfig()) });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
+});
+
+app.delete('/console/api-urls/backups/:key', requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const key = String(req.params.key || '');
+    if (!key.startsWith('api_url_backup_')) {
+      res.status(400).json({ error: 'Invalid backup key' });
+      return;
+    }
+
+    await getPool().query('DELETE FROM app_config WHERE key = $1', [key]);
+    res.json({ ok: true, ...(await loadApiUrlConfig()) });
   } catch (error) {
     res.status(500).json({ error: (error as Error).message });
   }
 });
 
 app.get('/console/settings', requireAdmin, async (_req: Request, res: Response) => {
-  res.json({ settings: [], apiUrlBackups: [] });
+  try {
+    const config = await loadApiUrlConfig();
+    res.json({ settings: [], apiUrlBackups: config.backups });
+  } catch (error) {
+    res.status(500).json({ error: (error as Error).message });
+  }
 });
 
 app.get('/health', (_req: Request, res: Response) => res.json({ ok: true, db: dbReady }));
@@ -313,8 +382,11 @@ app.get('/console/chat/rooms', requireAdmin, async (_req: Request, res: Response
 
 app.get('/api/config', async (_req: Request, res: Response) => {
   try {
-    const { rows } = await getPool().query("SELECT value FROM app_config WHERE key = 'api_url'");
-    res.json({ api_url: rows[0]?.value || '', backup_urls: [] });
+    const config = await loadApiUrlConfig();
+    res.json({
+      api_url: config.currentUrl || config.mainUrl || '',
+      backup_urls: config.backups.map((item) => item.url),
+    });
   } catch {
     res.json({ api_url: '', backup_urls: [] });
   }

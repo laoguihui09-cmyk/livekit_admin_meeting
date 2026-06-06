@@ -26,14 +26,15 @@
     if (secret) headers.set('X-API-Secret', secret);
 
     var controller = new AbortController();
-    var timeoutId = setTimeout(function () { controller.abort(); }, 15000);
+    var timeoutId = setTimeout(function () { controller.abort(); }, options.timeoutMs || 15000);
+    var signal = options.signal || controller.signal;
     var response;
     try {
       response = await fetch(apiUrl(base, path), {
         method: options.method || 'GET',
         headers: headers,
         body: options.body,
-        signal: controller.signal,
+        signal: signal,
       });
     } catch (error) {
       clearTimeout(timeoutId);

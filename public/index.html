@@ -35,7 +35,7 @@
         </div>
         <ul class="nav-menu">
           <li class="nav-item active" data-page="dashboard">
-            <span class="nav-icon">▦</span>
+            <span class="nav-icon">▣</span>
             <span>概览</span>
           </li>
           <li class="nav-item" data-page="codes">
@@ -43,7 +43,7 @@
             <span>授权码管理</span>
           </li>
           <li class="nav-item" data-page="chat">
-            <span class="nav-icon">◎</span>
+            <span class="nav-icon">●</span>
             <span>聊天记录</span>
           </li>
           <li class="nav-item" data-page="config">
@@ -80,22 +80,10 @@
               </div>
             </div>
             <div class="stat-grid">
-              <div class="stat">
-                <label>总数</label>
-                <strong id="totalCount">-</strong>
-              </div>
-              <div class="stat">
-                <label>已分配</label>
-                <strong id="assignedCount">-</strong>
-              </div>
-              <div class="stat">
-                <label>使用中</label>
-                <strong id="inUseCount">-</strong>
-              </div>
-              <div class="stat">
-                <label>已过期</label>
-                <strong id="expiredCount">-</strong>
-              </div>
+              <div class="stat"><label>总数</label><strong id="totalCount">-</strong></div>
+              <div class="stat"><label>已分配</label><strong id="assignedCount">-</strong></div>
+              <div class="stat"><label>使用中</label><strong id="inUseCount">-</strong></div>
+              <div class="stat"><label>已过期</label><strong id="expiredCount">-</strong></div>
             </div>
           </div>
         </div>
@@ -169,10 +157,10 @@
             <div class="card-head">
               <div>
                 <h2>API 状态</h2>
-                <p class="muted">当前连接的 API 接口</p>
+                <p class="muted">当前保存的会议 API 接口</p>
               </div>
               <div class="actions">
-                <button class="btn-secondary" id="checkAllUrlsBtn" type="button">检测</button>
+                <button class="btn-secondary" id="checkAllUrlsBtn" type="button">检测全部</button>
               </div>
             </div>
             <div class="result-box saved-panel">
@@ -192,18 +180,36 @@
           <div class="card">
             <div class="card-head">
               <div>
-                <h2>API 设置</h2>
-                <p class="muted">配置会议 API 服务地址</p>
+                <h2>主 API 设置</h2>
+                <p class="muted">配置前端默认使用的会议 API 服务地址</p>
               </div>
             </div>
             <form id="apiConfigForm" class="config-form form-block">
               <div class="field">
-                <label>接口地址</label>
+                <label>主接口地址</label>
                 <input name="base" placeholder="https://api.example.com">
-                <div class="field-hint" id="apiUrlHint">保存后会写入数据库 app_config</div>
+                <div class="field-hint" id="apiUrlHint">保存后写入数据库 app_config 的 api_url 和 api_url_main</div>
               </div>
               <div class="actions form-actions-row">
                 <button class="btn-primary config-submit" id="apiSubmitBtn" type="submit">保存并检测</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h2>备用 API 设置</h2>
+                <p class="muted">添加备用接口，前端配置会一起读取这些地址</p>
+              </div>
+            </div>
+            <form id="apiBackupForm" class="config-form form-block">
+              <div class="field">
+                <label>备用接口地址</label>
+                <input name="backup" placeholder="https://api-backup.example.com">
+              </div>
+              <div class="actions form-actions-row">
+                <button class="btn-secondary config-submit" type="submit">添加备用接口</button>
               </div>
             </form>
           </div>
