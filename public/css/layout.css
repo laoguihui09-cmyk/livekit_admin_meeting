@@ -1,0 +1,246 @@
+/* ===== Admin Layout with Sidebar Navigation ===== */
+
+.admin-layout {
+	display: grid;
+	grid-template-columns: 240px 1fr;
+	min-height: 100vh;
+	gap: 0;
+}
+
+/* Sidebar */
+.sidebar {
+	background: #1a1a2e;
+	color: #fff;
+	display: flex;
+	flex-direction: column;
+	position: sticky;
+	top: 0;
+	height: 100vh;
+	overflow-y: auto;
+}
+
+.sidebar-header {
+	padding: 24px 20px;
+	border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.sidebar-header h2 {
+	margin: 0;
+	font-size: 20px;
+	font-weight: 700;
+}
+
+.sidebar-header p {
+	margin: 4px 0 0;
+	font-size: 12px;
+	color: rgba(255,255,255,0.6);
+}
+
+.nav-menu {
+	list-style: none;
+	margin: 0;
+	padding: 12px 0;
+	flex: 1;
+}
+
+.nav-item {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 12px 20px;
+	cursor: pointer;
+	transition: background 0.2s;
+	font-size: 14px;
+}
+
+.nav-item:hover {
+	background: rgba(255,255,255,0.08);
+}
+
+.nav-item.active {
+	background: rgba(255,255,255,0.15);
+	border-left: 3px solid #00d4aa;
+}
+
+.nav-icon {
+	font-size: 18px;
+}
+
+.sidebar-footer {
+	padding: 16px 20px;
+	border-top: 1px solid rgba(255,255,255,0.1);
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+}
+
+.status-info {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	font-size: 12px;
+}
+
+.status-row {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.status-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: #666;
+}
+
+.status-dot.connected {
+	background: #00d4aa;
+}
+
+.status-dot.error {
+	background: #e74c3c;
+}
+
+/* Content Area */
+.content {
+	padding: 24px 32px;
+	background: #f5f5f5;
+	overflow-y: auto;
+}
+
+.page-content {
+	display: none;
+}
+
+.page-content.active {
+	display: block;
+}
+
+.page-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 24px;
+}
+
+.page-header h1 {
+	margin: 0;
+	font-size: 24px;
+	font-weight: 600;
+	color: #333;
+}
+
+/* Legacy compatibility */
+.page {
+	width: 100%;
+	margin: 0;
+	display: grid;
+	gap: 16px;
+}
+
+/* Grid System */
+.grid {
+	display: grid;
+	gap: 12px;
+	grid-template-columns: repeat(12, minmax(0, 1fr));
+}
+
+.span-12 { grid-column: span 12; }
+.span-8 { grid-column: span 8; }
+.span-6 { grid-column: span 6; }
+.span-4 { grid-column: span 4; }
+
+/* Toolbar */
+.toolbar {
+	display: grid;
+	gap: 12px;
+	grid-template-columns: minmax(0, 1fr) auto;
+	align-items: center;
+	margin-top: 14px;
+}
+
+.pill-row, .button-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+/* Grid Layouts */
+.stat-grid {
+	display: grid;
+	gap: 12px;
+	grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.form-grid, .sub-grid {
+	display: grid;
+	gap: 12px;
+}
+
+.form-grid.two, .sub-grid.two {
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.form-grid.form-block {
+	column-gap: 14px;
+	row-gap: 18px;
+}
+
+/* Config Layout */
+.config-layout {
+	display: grid;
+	grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+	gap: 16px;
+	align-items: start;
+}
+
+.config-form {
+	display: grid;
+	gap: 14px;
+	align-content: start;
+}
+
+.config-form.form-block {
+	column-gap: 14px;
+	row-gap: 18px;
+}
+
+/* Tester Layout */
+.tester-layout {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 16px;
+	align-items: stretch;
+}
+
+/* Saved Stack */
+.saved-stack {
+	display: grid;
+	grid-template-columns: minmax(0, 1.6fr) minmax(220px, 1fr) 120px;
+	gap: 14px;
+	align-items: stretch;
+}
+
+/* Actions */
+.actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+.actions.form-actions-row {
+	margin-top: 4px;
+}
+
+.actions.operations-actions {
+	margin-top: 18px;
+}
+
+/* Utilities */
+.form-span-all {
+	grid-column: 1 / -1;
+}
+
+.hidden-card { display: none !important; }
+.is-hidden { display: none !important; }

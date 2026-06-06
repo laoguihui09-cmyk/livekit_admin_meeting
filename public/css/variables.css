@@ -1,0 +1,23 @@
+:root {
+	/* Colors */
+	--bg: #efe6d7;
+	--panel: rgba(255, 250, 242, 0.9);
+	--line: rgba(96, 72, 36, 0.14);
+	--ink: #231b15;
+	--muted: #6f665d;
+	--accent: #9d3a1f;
+	--accent-deep: #6f2614;
+	--ok: #256944;
+	--warn: #a56218;
+	--danger: #a12929;
+	
+	/* Spacing */
+	--radius-lg: 22px;
+	--radius-md: 16px;
+	--radius-sm: 12px;
+	--shadow: 0 24px 60px rgba(65, 43, 18, 0.14);
+	
+	/* Typography */
+	--mono: "Cascadia Code", Consolas, monospace;
+	--sans: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}

@@ -1,0 +1,287 @@
+/* ===== Saved Panel ===== */
+.saved-panel {
+	padding: 22px;
+	min-height: 0;
+}
+
+.saved-item {
+	display: grid;
+	gap: 6px;
+	padding: 16px;
+	border-radius: var(--radius-md);
+	background: rgba(255,255,255,0.82);
+	border: 1px solid rgba(157, 58, 31, 0.08);
+}
+
+.saved-row {
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	flex-wrap: wrap;
+	gap: 12px;
+}
+
+.saved-label {
+	font-size: 12px;
+	font-weight: 700;
+	color: var(--muted);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.saved-value {
+	font-size: 18px;
+	line-height: 1.5;
+	color: var(--ink);
+	word-break: break-all;
+}
+
+.saved-value.compact {
+	font-size: 15px;
+}
+
+.saved-actions {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex: 0 0 auto;
+}
+
+/* ===== Tester ===== */
+.tester-form {
+	display: grid;
+	gap: 16px;
+	align-content: start;
+	padding: 20px;
+	border-radius: var(--radius-md);
+	background: rgba(255,255,255,0.7);
+	border: 1px solid rgba(157,58,31,0.08);
+}
+
+.tester-result {
+	min-height: 300px;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+.tester-result pre {
+	flex: 1;
+	margin: 0;
+}
+
+/* ===== API URLs Grid ===== */
+.api-urls-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 10px;
+	margin-bottom: 14px;
+}
+
+.api-url-card {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 12px 14px;
+	background: rgba(255,255,255,0.82);
+	border-radius: var(--radius-md);
+	border: 1px solid rgba(157,58,31,0.08);
+	min-width: 0;
+}
+
+.api-url-card .url-text {
+	flex: 1;
+	font-family: var(--mono);
+	font-size: 13px;
+	word-break: break-all;
+	min-width: 0;
+}
+
+.api-url-card .badge {
+	flex-shrink: 0;
+	font-size: 11px;
+	padding: 2px 7px;
+	border-radius: 99px;
+	background: rgba(157,58,31,0.1);
+	color: var(--accent);
+	font-weight: 700;
+}
+
+.api-url-card.is-backup .badge {
+	background: rgba(0,0,0,0.06);
+	color: var(--muted);
+}
+
+/* 检测状态点 */
+.card-check-dot {
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	flex-shrink: 0;
+	background: transparent;
+	border: 1.5px solid #ccc;
+	transition: background 0.2s;
+}
+.card-check-dot.checking {
+	background: #f39c12;
+	border-color: #f39c12;
+	animation: dot-pulse 0.8s infinite alternate;
+}
+.card-check-dot.ok {
+	background: #27ae60;
+	border-color: #27ae60;
+}
+.card-check-dot.fail {
+	background: #e74c3c;
+	border-color: #e74c3c;
+}
+@keyframes dot-pulse {
+	from { opacity: 1; }
+	to   { opacity: 0.3; }
+}
+
+/* 小型内联按钮 */
+.btn-link {
+	flex-shrink: 0;
+	font-size: 12px;
+	padding: 2px 8px;
+	border-radius: 4px;
+	border: 1px solid var(--accent);
+	color: var(--accent);
+	background: transparent;
+	cursor: pointer;
+	text-decoration: none;
+	line-height: 1.6;
+}
+.btn-link:hover { background: rgba(157,58,31,0.08); }
+
+.btn-promote {
+	flex-shrink: 0;
+	font-size: 12px;
+	padding: 2px 8px;
+	border-radius: 4px;
+	border: 1px solid #27ae60;
+	color: #27ae60;
+	background: transparent;
+	cursor: pointer;
+}
+.btn-promote:hover { background: rgba(39,174,96,0.08); }
+
+.api-meta-row {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 10px;
+}
+
+/* ===== Countdown ===== */
+.countdown {
+	margin-top: 4px;
+	font-size: 12px;
+	color: var(--muted);
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+/* ===== Row Actions ===== */
+.row-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+/* ===== Block Gap ===== */
+.block-gap-sm {
+	height: 12px;
+}
+
+/* ===== Mask Content ===== */
+.mask-content {
+	text-align: center;
+	padding: 20px;
+}
+
+.mask-icon {
+	font-size: 48px;
+	margin-bottom: 12px;
+}
+
+.mask-title {
+	font-size: 18px;
+	font-weight: 700;
+	margin-bottom: 8px;
+	color: var(--ink);
+}
+
+.mask-desc {
+	font-size: 14px;
+	color: var(--muted);
+	margin-bottom: 16px;
+	line-height: 1.6;
+}
+
+/* ===== API Card Disable State ===== */
+.card[data-type="api"][data-enabled="false"] {
+	/* All buttons are now clickable - no disable styles */
+}
+
+.card[data-type="api"][data-enabled="false"] .api-required-mask {
+	display: none;
+}
+
+/* ===== Chat Messages ===== */
+.chat-messages {
+	max-height: 600px;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	padding: 12px;
+	background: rgba(255,255,255,0.5);
+	border-radius: var(--radius-md);
+}
+
+.chat-msg {
+	padding: 10px 14px;
+	border-radius: 12px;
+	max-width: 85%;
+	word-break: break-word;
+}
+
+.chat-msg.received {
+	align-self: flex-start;
+	background: #fff;
+	border: 1px solid rgba(157,58,31,0.1);
+}
+
+.chat-msg.sent {
+	align-self: flex-end;
+	background: #d4edda;
+	border: 1px solid rgba(40,167,69,0.2);
+}
+
+.chat-msg-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 12px;
+	margin-bottom: 4px;
+	font-size: 11px;
+}
+
+.chat-msg-sender {
+	font-weight: 700;
+	color: var(--ink);
+}
+
+.chat-msg-time {
+	color: var(--muted);
+	font-size: 10px;
+}
+
+.chat-msg-body {
+	font-size: 14px;
+	line-height: 1.5;
+	color: #333;
+	white-space: pre-wrap;
+}
