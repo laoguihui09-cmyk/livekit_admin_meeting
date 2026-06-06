@@ -1,330 +1,280 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>视频会议工作台</title>
-	<link rel="stylesheet" href="css/admin.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>视频会议管理后台</title>
+  <link rel="stylesheet" href="css/admin.css">
 </head>
 <body>
-	<!-- 登录覆盖层 -->
-	<div class="login-overlay" id="loginOverlay">
-		<div class="login-box">
-			<h2>视频会议</h2>
-			<p>管理后台登录</p>
-			<div class="login-error" id="loginError"></div>
-			<form id="loginForm">
-				<div class="field">
-					<label>账号</label>
-					<input id="loginUser" placeholder="请输入账号" autocomplete="username" />
-				</div>
-				<div class="field">
-					<label>密码</label>
-					<input id="loginPass" type="password" placeholder="请输入密码" autocomplete="current-password" />
-				</div>
-				<button class="btn-primary" type="submit" style="width:100%;margin-top:8px">登 录</button>
-			</form>
-		</div>
-	</div>
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-box">
+      <h2>视频会议</h2>
+      <p>管理后台登录</p>
+      <div class="login-error" id="loginError"></div>
+      <form id="loginForm">
+        <div class="field">
+          <label>账号</label>
+          <input id="loginUser" placeholder="请输入账号" autocomplete="username">
+        </div>
+        <div class="field">
+          <label>密码</label>
+          <input id="loginPass" type="password" placeholder="请输入密码" autocomplete="current-password">
+        </div>
+        <button class="btn-primary" type="submit" style="width:100%;margin-top:8px">登录</button>
+      </form>
+    </div>
+  </div>
 
-	<!-- 修改密码模态框 -->
-	<div class="login-overlay is-hidden" id="passwordModal">
-		<div class="login-box">
-			<h2>修改密码</h2>
-			<p>请输入旧密码和新密码</p>
-			<div class="login-error" id="passwordError"></div>
-			<form id="passwordForm">
-				<div class="field">
-					<label>旧密码</label>
-					<input id="oldPassword" type="password" placeholder="请输入旧密码" autocomplete="current-password" />
-				</div>
-				<div class="field">
-					<label>新密码</label>
-					<input id="newPassword" type="password" placeholder="请输入新密码（至少6位）" autocomplete="new-password" />
-				</div>
-				<div class="field">
-					<label>确认新密码</label>
-					<input id="confirmPassword" type="password" placeholder="请再次输入新密码" autocomplete="new-password" />
-				</div>
-				<button class="btn-primary" type="submit" style="width:100%;margin-top:8px">确认修改</button>
-				<button class="btn-secondary" type="button" id="passwordModalClose" style="width:100%;margin-top:8px">取消</button>
-			</form>
-		</div>
-	</div>
+  <div class="page" id="appPage" style="display:none">
+    <div class="admin-layout">
+      <nav class="sidebar">
+        <div class="sidebar-header">
+          <h2>视频会议</h2>
+          <p>管理后台</p>
+        </div>
+        <ul class="nav-menu">
+          <li class="nav-item active" data-page="dashboard">
+            <span class="nav-icon">▦</span>
+            <span>概览</span>
+          </li>
+          <li class="nav-item" data-page="codes">
+            <span class="nav-icon">#</span>
+            <span>授权码管理</span>
+          </li>
+          <li class="nav-item" data-page="chat">
+            <span class="nav-icon">◎</span>
+            <span>聊天记录</span>
+          </li>
+          <li class="nav-item" data-page="config">
+            <span class="nav-icon">⚙</span>
+            <span>API 配置</span>
+          </li>
+        </ul>
+        <div class="sidebar-footer">
+          <div class="status-info">
+            <div class="status-row">
+              <span class="status-dot" id="dbStatusDot"></span>
+              <span id="dbStatusText">数据库未连接</span>
+            </div>
+            <div class="status-row">
+              <span class="status-dot" id="apiStatusDot"></span>
+              <span id="apiStatusText">API 未配置</span>
+            </div>
+          </div>
+          <button class="btn-secondary" id="logoutBtn" type="button">退出登录</button>
+        </div>
+      </nav>
 
-	<!-- 主页面 -->
-	<div class="page" id="appPage" style="display:none">
-		<div class="admin-layout">
-			<!-- 侧边栏导航 -->
-			<nav class="sidebar">
-				<div class="sidebar-header">
-					<h2>视频会议</h2>
-					<p>管理后台</p>
-				</div>
-				<ul class="nav-menu">
-					<li class="nav-item active" data-page="dashboard">
-						<span class="nav-icon">📊</span>
-						<span>概览</span>
-					</li>
-					<li class="nav-item" data-page="codes">
-						<span class="nav-icon">🔑</span>
-						<span>授权码管理</span>
-					</li>
-				<li class="nav-item" data-page="chat">
-					<span class="nav-icon">💬</span>
-					<span>聊天记录</span>
-				</li>
-				<li class="nav-item" data-page="config">
-					<span class="nav-icon">⚙️</span>
-					<span>API配置</span>
-				</li>
-				</ul>
-				<div class="sidebar-footer">
-					<div class="status-info">
-						<div class="status-row">
-							<span class="status-dot" id="dbStatusDot"></span>
-							<span id="dbStatusText">数据库未连接</span>
-						</div>
-						<div class="status-row">
-							<span class="status-dot" id="apiStatusDot"></span>
-							<span id="apiStatusText">API未配置</span>
-						</div>
-					</div>
-					<button class="btn-secondary" id="changePasswordBtn" type="button">修改密码</button>
-					<button class="btn-secondary" id="logoutBtn" type="button">退出登录</button>
-				</div>
-			</nav>
+      <main class="content">
+        <div class="page-content active" id="page-dashboard">
+          <div class="page-header">
+            <h1>概览</h1>
+            <button class="btn-primary" id="refreshAllBtn" type="button">刷新全部</button>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h2>数据库概览</h2>
+                <p class="muted">授权码统计数据</p>
+              </div>
+            </div>
+            <div class="stat-grid">
+              <div class="stat">
+                <label>总数</label>
+                <strong id="totalCount">-</strong>
+              </div>
+              <div class="stat">
+                <label>已分配</label>
+                <strong id="assignedCount">-</strong>
+              </div>
+              <div class="stat">
+                <label>使用中</label>
+                <strong id="inUseCount">-</strong>
+              </div>
+              <div class="stat">
+                <label>已过期</label>
+                <strong id="expiredCount">-</strong>
+              </div>
+            </div>
+          </div>
+        </div>
 
-			<!-- 内容区域 -->
-			<main class="content">
-				<!-- 概览页 -->
-				<div class="page-content active" id="page-dashboard">
-					<div class="page-header">
-						<h1>概览</h1>
-						<button class="btn-primary" id="refreshAllBtn" type="button">刷新全部</button>
-					</div>
-					
-					<!-- 数据库概览 -->
-					<div class="card">
-						<div class="card-head">
-							<div>
-								<h2>数据库概览</h2>
-								<p class="muted">授权码统计数据</p>
-							</div>
-						</div>
-						<div class="stat-grid">
-							<div class="stat">
-								<label>总数</label>
-								<strong id="totalCount">-</strong>
-							</div>
-							<div class="stat">
-								<label>已分配码</label>
-								<strong id="assignedCount">-</strong>
-							</div>
-							<div class="stat">
-								<label>使用中</label>
-								<strong id="inUseCount">-</strong>
-							</div>
-							<div class="stat">
-								<label>已过期</label>
-								<strong id="expiredCount">-</strong>
-							</div>
-						</div>
-					</div>
-				</div>
+        <div class="page-content" id="page-codes">
+          <div class="page-header">
+            <h1>授权码管理</h1>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h2>创建授权码</h2>
+                <p class="muted">批量创建会议授权码</p>
+              </div>
+            </div>
+            <form id="createForm" class="form-grid two form-block">
+              <div class="field">
+                <label>数量</label>
+                <input name="count" type="number" min="1" placeholder="创建数量" title="创建数量">
+              </div>
+              <div class="field">
+                <label>有效分钟</label>
+                <input name="expire_minutes" type="number" min="1" placeholder="有效分钟" title="有效分钟">
+              </div>
+              <div class="field form-span-all">
+                <label>分配对象 <span style="color:#c0392b">*</span></label>
+                <input name="assigned" placeholder="姓名、备注名或用户 ID" title="分配对象" required>
+              </div>
+              <div class="actions form-actions-row form-span-all">
+                <button class="btn-success" type="submit">创建授权码</button>
+                <button class="btn-danger-solid" id="cleanupBtn" type="button">清理过期码</button>
+              </div>
+            </form>
+          </div>
 
-				<!-- 授权码管理页 -->
-				<div class="page-content" id="page-codes">
-					<div class="page-header">
-						<h1>授权码管理</h1>
-					</div>
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h2>授权码列表</h2>
+                <p class="muted">所有授权码，数据来自数据库</p>
+              </div>
+              <div class="actions">
+                <button class="btn-secondary" id="refreshInlineBtn" type="button">刷新列表</button>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>分配对象</th>
+                    <th>总数</th>
+                    <th>已使用</th>
+                    <th>未使用</th>
+                    <th>已过期</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody id="codesTable">
+                  <tr><td colspan="6" class="empty">尚未加载</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
 
-					<!-- 创建授权码 -->
-					<div class="card">
-						<div class="card-head">
-							<div>
-								<h2>创建授权码</h2>
-								<p class="muted">调用外部API批量创建邀请码</p>
-							</div>
-						</div>
-						<form id="createForm" class="form-grid two form-block">
-							<div class="field">
-								<label>数量</label>
-								<input name="count" type="number" min="1" placeholder="创建数量" title="创建数量" />
-							</div>
-							<div class="field">
-								<label>有效分钟</label>
-								<input name="expire_minutes" type="number" min="1" placeholder="有效分钟" title="有效分钟" />
-							</div>
-							<div class="field form-span-all">
-								<label>分配对象 <span style="color:#c0392b">*</span></label>
-								<input name="assigned" placeholder="必填，姓名、备注名或用户ID" title="分配对象" required />
-							</div>
-							<div class="actions form-actions-row form-span-all">
-								<button class="btn-success" type="submit">创建授权码</button>
-								<button class="btn-danger-solid" id="cleanupBtn" type="button">清理过期码</button>
-							</div>
-						</form>
-					</div>
+        <div class="page-content" id="page-config">
+          <div class="page-header">
+            <h1>API 配置</h1>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h2>API 状态</h2>
+                <p class="muted">当前连接的 API 接口</p>
+              </div>
+              <div class="actions">
+                <button class="btn-secondary" id="checkAllUrlsBtn" type="button">检测</button>
+              </div>
+            </div>
+            <div class="result-box saved-panel">
+              <div id="apiUrlsGrid" class="api-urls-grid"></div>
+              <div class="api-meta-row">
+                <div class="saved-item">
+                  <div class="saved-label">连接状态</div>
+                  <div class="status-indicator">
+                    <span class="status-dot" id="currentStatusDot"></span>
+                    <span id="connectionStatusText">未连接</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-					<!-- 授权码列表 -->
-					<div class="card">
-						<div class="card-head">
-							<div>
-								<h2>授权码列表</h2>
-								<p class="muted">所有授权码（数据来源于数据库）</p>
-							</div>
-							<div class="actions">
-								<button class="btn-secondary" id="refreshInlineBtn" type="button">刷新列表</button>
-							</div>
-						</div>
-						<div class="table-wrap">
-							<table>
-								<thead>
-									<tr>
-										<th>分配对象</th>
-										<th>授权码(总)</th>
-										<th>已使用</th>
-										<th>未使用</th>
-										<th>已过期</th>
-										<th>操作</th>
-									</tr>
-								</thead>
-								<tbody id="codesTable">
-									<tr>
-										<td colspan="6" class="empty">尚未加载</td>
-									</tr>
-								</tbody>
-							</table>
-						</div>
-					</div>
-				</div>
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h2>API 设置</h2>
+                <p class="muted">配置会议 API 服务地址</p>
+              </div>
+            </div>
+            <form id="apiConfigForm" class="config-form form-block">
+              <div class="field">
+                <label>接口地址</label>
+                <input name="base" placeholder="https://api.example.com">
+                <div class="field-hint" id="apiUrlHint">保存后会写入数据库 app_config</div>
+              </div>
+              <div class="actions form-actions-row">
+                <button class="btn-primary config-submit" id="apiSubmitBtn" type="submit">保存并检测</button>
+              </div>
+            </form>
+          </div>
+        </div>
 
-				<!-- API配置页 -->
-				<div class="page-content" id="page-config">
-					<div class="page-header">
-						<h1>API配置</h1>
-					</div>
+        <div class="page-content" id="page-chat">
+          <div class="page-header">
+            <h1>聊天记录</h1>
+            <button class="btn-secondary" id="chatRefreshBtn" type="button">刷新</button>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h2>选择房间</h2>
+                <p class="muted">查看对应房间的聊天历史</p>
+              </div>
+            </div>
+            <div class="field">
+              <select id="chatRoomSelect">
+                <option value="">-- 全部房间 --</option>
+              </select>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h2>消息列表</h2>
+                <p class="muted" id="chatMsgCount">共 0 条消息</p>
+              </div>
+            </div>
+            <div class="chat-messages" id="chatMessagesContainer">
+              <div class="empty">请选择一个房间查看聊天记录</div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
 
-					<!-- API状态 -->
-					<div class="card">
-						<div class="card-head">
-							<div>
-								<h2>API状态</h2>
-								<p class="muted">当前连接的API接口</p>
-							</div>
-							<div class="actions">
-								<button class="btn-secondary" id="checkAllUrlsBtn" type="button">检测全部</button>
-							</div>
-						</div>
-						<div class="result-box saved-panel">
-							<div id="apiUrlsGrid" class="api-urls-grid"></div>
-							<div class="api-meta-row">
-								<div class="saved-item">
-									<div class="saved-label">连接状态</div>
-									<div class="status-indicator">
-										<span class="status-dot" id="currentStatusDot"></span>
-										<span id="connectionStatusText">未连接</span>
-									</div>
-								</div>
-							</div>
-						</div>
-					</div>
+  <div class="modal-overlay is-hidden" id="detailModal">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3 id="detailModalTitle">授权码详情</h3>
+        <div class="modal-btn-row">
+          <button class="btn-secondary" id="detailModalClose" type="button">关闭</button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>授权码</th>
+                <th>状态</th>
+                <th>房间</th>
+                <th>有效期</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="detailTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
 
-					<!-- API设置 -->
-					<div class="card">
-						<div class="card-head">
-							<div>
-								<h2>API设置</h2>
-								<p class="muted">配置音视频API接口地址</p>
-							</div>
-						</div>
-						<form id="apiConfigForm" class="config-form form-block">
-							<div class="field">
-								<label>接口地址</label>
-								<input name="base" placeholder="https://api.example.com" />
-								<div class="field-hint" id="apiUrlHint">首次填写将保存为使用中</div>
-							</div>
-							<div class="actions form-actions-row">
-								<button class="btn-primary config-submit" id="apiSubmitBtn" type="submit">保存并连接</button>
-							</div>
-						</form>
-					</div>
-				</div>
-				<!-- 聊天记录页 -->
-				<div class="page-content" id="page-chat">
-					<div class="page-header">
-						<h1>聊天记录</h1>
-						<button class="btn-secondary" id="chatRefreshBtn" type="button">刷新</button>
-					</div>
+  <div class="toast-stack" id="toastStack"></div>
 
-					<!-- 房间选择 -->
-					<div class="card">
-						<div class="card-head">
-							<div>
-								<h2>选择房间</h2>
-								<p class="muted">查看对应房间的聊天历史</p>
-							</div>
-						</div>
-						<div class="field">
-							<select id="chatRoomSelect">
-								<option value="">-- 全部房间 --</option>
-							</select>
-						</div>
-					</div>
-
-					<!-- 聊天消息列表 -->
-					<div class="card">
-						<div class="card-head">
-							<div>
-								<h2>消息列表</h2>
-								<p class="muted" id="chatMsgCount">共 0 条消息</p>
-							</div>
-						</div>
-						<div class="chat-messages" id="chatMessagesContainer">
-							<div class="empty">请选择一个房间查看聊天记录</div>
-						</div>
-					</div>
-				</div>
-			</main>
-		</div>
-	</div>
-
-	<!-- 授权码详情模态框 -->
-	<div class="modal-overlay is-hidden" id="detailModal">
-		<div class="modal-box">
-			<div class="modal-head">
-				<h3 id="detailModalTitle">授权码详情</h3>
-				<div class="modal-btn-row">
-					<button class="btn-secondary" id="detailModalClose" type="button">关闭</button>
-				</div>
-			</div>
-			<div class="modal-body">
-				<div class="table-wrap">
-					<table>
-						<thead>
-							<tr>
-								<th>授权码</th>
-								<th>状态</th>
-								<th>房间</th>
-								<th>有效期</th>
-								<th>操作</th>
-							</tr>
-						</thead>
-						<tbody id="detailTable"></tbody>
-					</table>
-				</div>
-			</div>
-		</div>
-	</div>
-
-	<!-- Toast 容器 -->
-	<div class="toast-stack" id="toastStack"></div>
-
-	<!-- JavaScript 加载 -->
-	<script src="js/config.js"></script>
-	<script src="js/api.js"></script>
-	<script src="js/app.js"></script>
-	<script src="js/login.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/login.js"></script>
 </body>
 </html>
