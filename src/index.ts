@@ -323,7 +323,7 @@ app.get('/api/config', async (_req: Request, res: Response) => {
 const publicDir = path.resolve(__dirname, '..', 'public');
 if (fs.existsSync(publicDir)) {
   app.use(express.static(publicDir));
-  app.get('*', (req: Request, res: Response, next: NextFunction) => {
+  app.use((req: Request, res: Response, next: NextFunction) => {
     if (req.path.startsWith('/api/') || req.path.startsWith('/console/') || req.path.startsWith('/health')) {
       next();
       return;
