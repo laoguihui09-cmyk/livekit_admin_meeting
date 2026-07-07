@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
-import { initDatabase, getPool } from './database';
+import { initDatabase, getPool, runDatabaseInit } from './database';
 import { readIntEnv, requireEnv } from './env';
 
 dotenv.config();
@@ -16,30 +16,6 @@ app.use(express.json());
 
 const databaseUrl = requireEnv('DATABASE_URL');
 let dbReady = false;
-
-try {
-  initDatabase(databaseUrl);
-  dbReady = true;
-  console.log('PostgreSQL pool created');
-
-  getPool()
-    .query(`
-      CREATE TABLE IF NOT EXISTS chat_messages (
-        id SERIAL PRIMARY KEY,
-        room_name TEXT NOT NULL,
-        sender_identity TEXT NOT NULL,
-        sender_name TEXT NOT NULL DEFAULT '',
-        content TEXT NOT NULL,
-        created_at TIMESTAMPTZ DEFAULT NOW()
-      );
-      CREATE INDEX IF NOT EXISTS idx_chat_messages_room ON chat_messages(room_name);
-      CREATE INDEX IF NOT EXISTS idx_chat_messages_created ON chat_messages(created_at);
-    `)
-    .then(() => console.log('chat_messages table ready'))
-    .catch((error: Error) => console.error('Failed to create chat_messages table:', error.message));
-} catch (error) {
-  console.error('PostgreSQL initialization failed:', (error as Error).message);
-}
 
 const API_SECRET = requireEnv('API_SECRET');
 const JWT_SECRET = process.env.ADMIN_CONSOLE_JWT_SECRET?.trim() || API_SECRET;
@@ -412,6 +388,22 @@ app.use((req: Request, res: Response) => {
   }
 });
 
-const port = readIntEnv('PORT', 3000);
-app.listen(port, () => console.log(`Admin server started: http://localhost:${port}`));
+async function bootstrap(): Promise<void> {
+  try {
+    initDatabase(databaseUrl);
+    await runDatabaseInit();
+    dbReady = true;
+  } catch (error) {
+    console.error('PostgreSQL initialization failed:', (error as Error).message);
+  }
+
+  const port = readIntEnv('PORT', 3000);
+  app.listen(port, () => console.log(`Admin server started: http://localhost:${port}`));
+}
+
+bootstrap().catch((error: Error) => {
+  console.error('Failed to start admin server:', error.message);
+  process.exit(1);
+});
+
 process.on('SIGTERM', () => process.exit(0));

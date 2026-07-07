@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import { Pool } from 'pg';
 
 let pool: Pool;
@@ -35,4 +37,11 @@ export function getPool(): Pool {
     throw new Error('Database has not been initialized');
   }
   return pool;
+}
+
+export async function runDatabaseInit(): Promise<void> {
+  const sqlPath = path.join(__dirname, '../database_init.sql');
+  const sql = fs.readFileSync(sqlPath, 'utf8');
+  await getPool().query(sql);
+  console.log('Database schema initialized');
 }
